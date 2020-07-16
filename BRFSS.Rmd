@@ -1,0 +1,192 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    fig_width: 10
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+* * *
+
+## Part 1: Data
+
+The data set is very huge with about 330 variables and 491775 observations. These 330 variables are separate and can be divided into further groups. With the major observation lying in Main Survey of 16 subsections. There are also 22 optional subsections with various other sections.
+
+This huge data set is collected by calling/online methods to various people around the every part  of United States. This data is very useful and can be used to understand, the populations general health.
+As Behavioral Risk Factor Surveillance System, is a reliable system I focused my study on Genreal Health, and how it was effected by various factors.
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+
+#### How does sleep effect peoples daily life.
+
+I personally believe that sleep time of a person affect him a lot hence I will be analyzing its effect on the person daily health including their efficiency and physical/mental health.
+
+
+
+**Research quesion 2:**
+
+#### Alcohol and Tobacco Consumption effect the Healthy Life.
+
+We all know that alcohol and tobcco have various harmful effects on one's body,and here I will try tosee how far does it effects you actually effects you.
+
+**Research question 3:**
+
+#### Eating Habits affecting a person.
+
+It is said "we our what we eat", hence here I will be analyzing how the food we eat affects our daily life.
+
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+### Research question 1:
+ 
+Here is the plot and short summary for sleeping time of each person. 
+
+```{r }
+ ggplot(brfss2013,aes(x=sleptim1,na.rm=TRUE)) + geom_histogram(binwidth=1)+ xlim(1,12) + ylim(0,150000)+labs(title="Sleep Time Histogram",x="Sleep Time",y="Count")+theme_test()
+
+summarise(brfss2013,mean_sleep_time = mean(sleptim1,na.rm=TRUE), sd_sleptime = sd(sleptim1,na.rm=TRUE), n = n())
+```
+ As you can see the mean sleeping time is 7.05 hours. Scientifically its necessary for each person to have minimum sleep timing from 7 to 9 hours. Given the standard deviation as 1.6 hours  we can assume that 68% people have tendency to sleep for 5.4 to 8.65 hours which is a little less than recommended time period. As you can see the histogram the distribution is a little left skewed. Lets analyze other variables and compare them to check for any relation.
+ 
+```{r }
+count(brfss2013,var=genhlth,sleptim1<7)
+```
+Here you can see as an average idea, when a persons general health is poor, 50% people have a sleep time less than 7 hours. And this ratio keeps decreasing as we move towards a healthier life that is number of people sleeping less than 7 hours vs the number of people more than 7 hours in each category of general health decreases as we move towards better health.
+
+Lets convert this categorical data into numerical data, hence we can use as.numeric to convert genhlth to a numerical content with 1 denoting Excellent general health and 5 denoting Poor Health.
+
+
+```{r}
+brfss2013 <- brfss2013 %>% mutate(genhlth1= as.numeric(genhlth))
+ ggplot(brfss2013,aes(x=genhlth1))+geom_histogram(binwidth=1)+labs(title="General Health Histogram",x="General Health",y="Count")+theme_test()
+ summarise(brfss2013,mean_general_health = mean(genhlth1,na.rm=TRUE), sd=sd(genhlth1,na.rm=TRUE),n=n())
+
+```
+
+Here you can realize, that the genral health of a person is rated 2.6 with standard deviation of 1 rating, hence a person health can be said to be in between good and fair.
+But the earlier count from counting general health according to sleep time told
+
+
+Now lets find the BMI of each person.
+```{r}
+brfss2013 <- brfss2013 %>% mutate(height= as.numeric(height3))
+brfss2013 <- brfss2013 %>% mutate(heightm= ((height%/%100)*(0.3048))+((height%%100)*(0.0254)))
+brfss2013 <- brfss2013 %>% mutate( weight= as.numeric(weight2)*0.453592)
+brfss2013 <- brfss2013 %>% mutate(bmi=weight/(heightm*heightm))
+count(brfss2013,var=bmi>25,sleptim1<7)
+
+```
+This shows here how sleep time is related to a persons BMI. You can see that about 45% of people having BMI over 25 have less than 7 hours of sleep.
+This is suficient data to show that sleeptime effects your health and weight.
+
+### Research question 2:
+
+Here will be searching more about the alcohol and the Tobbacco consumption.
+
+
+ Now lets see how this affects their general health.
+
+Creating a new dataframe.
+```{r}
+smokegen<-as.data.frame(count(brfss2013,var=smoke100,genhlth))
+smokegen<-na.omit(smokegen)
+
+```
+Creating a plot.
+```{r}
+ggplot(smokegen) +geom_col(aes(x = var, y = n, fill = genhlth), position = "dodge")+labs(title="Smoken At Least 100 Cigarretes",x="Response",y="Count",fill="General Health")+theme_test()
+```
+
+
+Here, you can clearly see the difference in the health of people based on the different response for Cigarettes usage. The people who responded yes for smoking atleast 100 cigarettes, have a majority of good general health with comparativly more proportion of people having fair and poor lifestyle. The number of people in excellent health are very low.
+
+People who responded no for smoking atleast 100 cigarettes, have way more people in having a very good response to general health and the curve is inclined relatively more towards excellent general health, with very low proportion of fair and poor general health participants.
+
+The chances that this is coincidence is very low and hence it can be concluded that smoking affects your health and life a lot and in a bad way.
+
+#### Now lets find out how alcohol effets people.
+
+Lets form a new dataframe and do analysis using, number of  average drinks per day vs general health.
+
+Creating a new dataframe.
+```{r}
+alc <-as.data.frame(count(brfss2013,var=avedrnk2,genhlth))
+alc<-na.omit(alc)
+```
+Lets limit the plot upto 10 average drinks per day.
+Forming a plot.
+```{r}
+ggplot(alc) + geom_col(aes(x = var, y = n, fill = genhlth), position = "dodge")+xlim(0,10)+labs(title="Average Drinks Per Day",x="Number of Drinks Per Day",y="Count",fill="General Health")+theme_test()
+
+```
+
+
+The first glimpse you get is how moving from left to right, the difference between the peak general health condition changes from very good to good with increasing number of average drinks per day.
+This shows here that alcohol effects your daily life and health in a bad way with more effects you can notice. Not only that the differenc changes at a very fast pace.
+In the US, the government suggests men can drink double that amount — up to two drinks per day — but advise women who are not pregnant to drink up to one drink per day.
+
+### Research quesion 3:
+
+Now lets analyze how eating habits may or may not effect a person health.
+
+Summing all the eating vegetables.
+```{r}
+brfss2013 <- brfss2013 %>% mutate(sum=fruit1+fvbeans+fvgreen+fvorang+vegetab1)
+```
+After summing up the variables to a single one, I will be creating a new data frame containing the sum and corresponding general health.
+
+```{r}
+food<-as.data.frame(count(brfss2013,var=sum,genhlth))
+food<-na.omit(food)
+```
+
+After removing all the NA values, I have created a new variable cat1 which has labels for 1 to 5 corresponding to the sum of food variables with intervals of 500 each.
+
+Hence sums can be labeled as:
+0-500 : 1
+500-1000:2
+1000-1500:3
+1500-2000:4
+2000-2500:5
+
+```{r}
+food$cat<-cut(food$var,seq(0,2501,500),right=FALSE)
+food$cat1<-cut(food$var,seq(0,2501,500),right=FALSE,labels=c(1:5))
+```
+
+Now making a fill plot to understand the percentages of general health in each of the categories.
+
+```{r}
+
+ggplot(food)+geom_col(aes(x=cat1,y=n,fill=genhlth),position="fill")+labs(title="Food Plot",x="Category For Eating Sum",y="Percentage of Health Portions",fill="General Health")+theme_test()
+```
+
+In category 1, their is high percentage of fair health compared to other. Moving towards 5 you can see there is not much change health conditions but in category 5 with highest excellent health life.
+Even though there is not much change in excellent health, you can see that the very good health bar has increased continuously slowly.
+
+So we can say there is not high effectiveness of food, but if you have either extremities in eating habits, that is either very low or very high, only then the effects our available.
